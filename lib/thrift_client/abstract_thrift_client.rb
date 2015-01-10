@@ -170,12 +170,15 @@ class AbstractThriftClient
     rescue *@options[:exception_class_overrides] => e
       raise_or_default(e, method_name)
     rescue *@options[:exception_classes] => e
-      disconnect!(true)
       tries ||= (@options[:retry_overrides][method_name.to_sym] || @options[:retries]) + 1
       tries -= 1
       if tries > 0
+        disconnect!(false)
+        # Make 'next_live_server' return '@current_server' (if its 'up?').
+        @server_index -= 1
         retry
       else
+        disconnect!(true)
         raise_or_default(e, method_name)
       end
     rescue Exception => e
